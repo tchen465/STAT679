@@ -4,6 +4,7 @@ output: html_document
 date: "2023-10-21"
 ---
 
+STAT 679. Problem Set 2. Tuocheng Chen
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, cache = TRUE)
 options(warn = -1)
