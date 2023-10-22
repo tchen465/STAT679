@@ -1,5 +1,6 @@
 # Shiny App for PS2 II b)
-# Load necessary libraries
+
+# Load libraries
 library(shiny)
 library(ggplot2)
 library(plotly)
@@ -12,16 +13,17 @@ power_plants <- read_sf("https://raw.githubusercontent.com/krisrs1128/stat992_f2
   mutate(
     longitude = st_coordinates(geometry)[, 1],
     latitude = st_coordinates(geometry)[, 2],
-    selected_ = rep(TRUE, nrow(.))  # Initialize the selected_ column
+    selected_ = rep(TRUE, nrow(.))
   )
 
+# Function to reset selection based on a brush event
 reset_selection <- function(x, brush) {
   if (is.null(brush)) return(rep(TRUE, nrow(x)))
   res <- brushedPoints(x, brush, allRows = TRUE)$selected_
   res
 }
 
-
+# Function for stacked histogram
 histogram <- function(power_plants) {
   power_plants %>%
     ggplot(aes(x = log_capacity, fill = primary_fuel)) +
@@ -32,6 +34,7 @@ histogram <- function(power_plants) {
     scale_y_continuous(expand = c(0, 0))
 }
 
+# Function for scatterplot
 scatterplot <- function(power_plants) {
   power_plants %>%
     ggplot() +
@@ -42,12 +45,14 @@ scatterplot <- function(power_plants) {
     theme_minimal()
 }
 
+# Function for data table
 data_table <- function(power_plants) {
   power_plants %>%
     st_drop_geometry() %>%
     select(name, owner, primary_fuel, commissioning_year, capacity_mw) 
 }
 
+# Define UI
 ui <- fluidPage(
   titlePanel("Interactive Analysis of Power Plants"),
   fluidRow(
@@ -57,29 +62,21 @@ ui <- fluidPage(
   dataTableOutput("table")
 )
 
+# Define server logic
 server <- function(input, output, session) {
   selected <- reactiveVal(rep(TRUE, nrow(power_plants)))
   
+  # Observe brush events and update the selection
   observeEvent(input$plot_brush, {
     sel <- reset_selection(power_plants, input$plot_brush)
     selected(sel)
   })
   
-  output$histogram <- renderPlot(histogram(power_plants))
-  output$scatterplot <- renderPlot(scatterplot(power_plants %>% filter(selected())))
-  output$table <- renderDataTable({data_table(power_plants, selected())})
-}
-server <- function(input, output, session) {
-  selected <- reactiveVal(rep(TRUE, nrow(power_plants)))
-  
-  observeEvent(input$plot_brush, {
-    sel <- reset_selection(power_plants, input$plot_brush)
-    selected(sel)
-  })
-  
+  # Render the plots and table
   output$histogram <- renderPlot(histogram(power_plants))
   output$scatterplot <- renderPlot(scatterplot(power_plants %>% filter(selected())))
   output$table <- renderDataTable({data_table(power_plants %>% filter(selected()))})
 }
 
+# Run the Shiny app
 shinyApp(ui, server)
