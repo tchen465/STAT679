@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Bar Chart with .join()</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+
+<button onclick="updateAndRedraw()">Update</button>
+
+<script>
+    let bar_ages = [],
+        generator = d3.randomUniform(0, 500),
+        id = 0;
+
+    const width = 600;
+    const height = 400;
+    const barWidth = width / 7;
+    const spacing = barWidth / 2;
+
+    function update() {
+        bar_ages = bar_ages.map(d => {
+            return { id: d.id, age: d.age + 1, height: d.height };
+        });
+
+        const newBar = { age: 0, height: generator(), id: id };
+        for (let i = bar_ages.length; i > 0; i--) {
+            bar_ages[i] = bar_ages[i - 1];
+        }
+        bar_ages[0] = newBar;
+
+        if (bar_ages.length > 5) {
+            bar_ages.splice(-1, 1); // remove the last element
+        }
+
+        id += 1;
+    }
+
+    const svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    function drawBars() {
+        const y = d3.scaleLinear()
+            .domain([0, 500])
+            .range([0, height]);
+
+        const bars = svg.selectAll(".bar")
+            .data(bar_ages, d => d.id)
+            .join(
+                enter => enter.append("rect")
+                              .attr("class", "bar")
+                              .attr("x", 0)
+                              .attr("y", height)
+                              .attr("width", barWidth)
+                              .attr("height", 0)
+                              .transition()
+                              .delay(500)
+                              .duration(500)
+                              .attr("y", d => height - y(d.height))
+                              .attr("height", d => y(d.height)),
+                update => update.transition()
+                                .duration(500)
+                                .attr("x", (d, i) => i * (barWidth + spacing)),
+                exit => exit.transition()
+                             .duration(500)
+                             .attr("x", width)
+                             .remove()
+            );
+    }
+
+    function updateAndRedraw() {
+        update();
+        drawBars();
+    }
+
+    // Initial draw
+    drawBars();
+
+</script>
+
+</body>
+</html>
