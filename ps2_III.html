@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>D3 Circle Transition</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <script>
+        // Create SVG element
+        const svg = d3.select("body")
+                      .append("svg")
+                      .attr("width", 500)
+                      .attr("height", 500);
+
+        // Initial data setup
+        let generator = d3.randomUniform(); 
+        let x = d3.range(10).map(generator);
+
+        // a. Encode data using x-coordinates
+        svg.selectAll("circle")
+           .data(x)
+           .enter()
+           .append("circle")
+           .attr("cx", d => 500*d)
+           .attr("cy", 250) // setting all circles on the same y-coordinate
+           .attr("r", 10) 
+           .attr("fill", "blue"); 
+
+        // b. Animate circles with transitions on cx
+        function update() {
+            x = d3.range(10).map(generator); // generate new set of data
+            svg.selectAll("circle")
+               .data(x)
+               .transition() 
+               .duration(3000) 
+               .attr("cx", d => 500*d)
+        // c. Adding other Attributes
+               .attr("fill", () => d3.interpolateRainbow(Math.random())) // change color
+               .attr("r", () => d3.randomUniform(5, 15)()); // change size randomly 
+         
+            setTimeout(update, 3500); // schedule the next update in 3.5 seconds
+        }
+
+        // Start the animation loop
+        update();
+
+    </script>
+</body>
+</html>
