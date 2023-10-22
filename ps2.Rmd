@@ -1,0 +1,293 @@
+---
+title: "PS2"
+output: html_document
+date: "2023-10-21"
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, cache = TRUE)
+options(warn = -1)
+```
+
+```{r}
+if (!require(tidyverse)) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require(shiny)) {
+  install.packages("shiny")
+  library(shiny)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+if (!require(viridis)) {
+  install.packages("viridis")
+  library(viridis)
+}
+if (!require(sf)) {
+  install.packages("sf")
+  library(sf)
+}
+```
+
+
+
+I. American Time Use Survey
+
+```{r}
+activity <- read_csv("https://github.com/krisrs1128/stat992_f23/raw/main/exercises/ps2/activity.csv")
+```
+a)
+
+1).Comparing Multiple Activities:
+
+How does the engagement in "Running" and "Walking" compare throughout the day? (For example, do these activities peak during the same time intervals? Or are there distinct preferred times for each activity?)
+
+2).Comparing Timepoints Within a Single Activity:
+
+For the activity "Doing yoga", how does the prop_relative value differ between 5-7AM and 6-8PM? 
+
+3).Comparing Peaks of Multiple Similar Activities
+
+Among team sports like "Playing basketball", "Playing soccer", and "Playing baseball", which activity has the highest peak engagement (prop_relative) and at what time?
+
+b)
+```{r}
+# Set Palatte
+my_colors <- c("#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#ffff33", "#a65628", 
+               "#f781bf", "#999999", "#76b7b2", "#17becf", "#bcbd22", "#7f7f7f", "#c49c94", 
+               "#c7c7c7", "#dbdb8d", "#d62728", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", 
+               "#b5bd61", "#c5b0d5", "#8ca252", "#c48c84", "#e7969c", "#7e6f7f", "#65453f")
+
+# Plot Multi-Line Graph
+ggplot(activity, aes(x = time, y = prop_smooth, color = activity)) + 
+  geom_line() +
+  labs(title = "Activity Engagement Over Time", 
+       x = "Time of Day", 
+       y = "Smoothed Proportion of Engagement") + 
+  theme_minimal() + 
+  scale_color_manual(values = my_colors) +
+  scale_x_datetime(date_labels = "%H:%M", breaks = "2 hour") + # Adjust Time
+  theme(legend.position = "right",
+        legend.text = element_text(size = 4), 
+        axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+This helps answer the questions: Which activity has the highest engagement at any given time? At what times are certain activities most popular?
+
+
+c)
+
+1).Try with heatmap
+```{r}
+# Create Heatmap
+ggplot(activity, aes(x = time, y = activity)) +
+  geom_tile(aes(fill = prop_smooth), color = "white") +
+  scale_fill_viridis_c(name = "Smoothed Proportion") +
+  scale_x_datetime(date_labels = "%H:%M", breaks = "2 hour") +  # Simplified time format
+  labs(title = "Activity Engagement Over Time",
+       x = "Time of Day",
+       y = "Activity") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angling x-axis labels
+```
+
+2).Trade-offs:
+
+Multi-line plot:
+Pros:
+Easier to track the progression of individual activities over time.
+Directly compare the relative intensities of activities.
+Cons:
+Can be cluttered with many overlapping lines.
+Harder to discern exact values between close lines.
+
+Heatmap:
+Pros:
+Clear visual separation between activities.
+Can handle a large number of activities without getting too cluttered.
+Cons:
+Harder to trace the exact progression of a single activity.
+
+3).Questions More Easily Answered:
+
+Multi-line plot:
+How does the trend of a single activity evolve over the day?
+At which specific timepoints do certain activities surpass others in engagement?
+
+Heatmap:
+At which times are the peak engagements for all activities?
+Which activities have similar engagement patterns throughout the day?
+
+
+II. Midwestern Power Plants
+
+```{r}
+# Read in the data and preprocess
+power_plants <- read_sf("https://raw.githubusercontent.com/krisrs1128/stat992_f23/main/exercises/ps2/power_plants.geojson") %>%
+  mutate(
+    coords = st_coordinates(geometry),
+    longitude = coords[, 1],
+    latitude = coords[, 2]
+  )
+```
+
+a)
+```{r}
+# Create the map
+ggplot(data = power_plants, aes(x = longitude, y = latitude)) +
+  geom_point(aes(color = primary_fuel, size = capacity_mw), alpha = 0.6) +
+  scale_size_continuous(name = "Generation Capacity (MW)") +
+  labs(title = "Power Plants in the Upper Midwest",
+       x = "Longitude",
+       y = "Latitude",
+       color = "Primary Fuel") +
+  theme_minimal()
+```
+
+b)
+
+the video is at: https://github.com/tchen465/STAT679/blob/main/STAT679_PS2_II_b.mp4.
+code at https://github.com/tchen465/STAT679/blob/main/IIb.R (NOT INTERACTIVE)
+
+c)
+
+1).Strength
+
+The interactive visualization allows users to perform faceted exploration of the power plant data. Can selectively view power plants in a specific range of capacities. 
+
+2). Limitation
+
+It is still hard to immediately see specific details like the plant name, exact capacity, owner, etc.., even if there is a table, it is hard to correspond each line to its point. Besides, selection is limited to the x-axis and not so free.
+
+3). Poorly Suited for Temporal Analysis
+
+The current visualization does not support this. The histogram displays capacity distribution across all years without segregating the data temporally. 
+
+4). Alternative Approach:
+
+Maybe can use color scale to show time and differ fuel type by shape, but this may make the plot too complex. Also possible to add time selection in interactive ways.
+
+III. Random Point Transitions
+
+video: https://github.com/tchen465/STAT679/blob/main/STAT679_PS2_III.mp4 
+code: https://github.com/tchen465/STAT679/blob/main/ps2_III.html
+
+
+IV. Bar Chart Transitions
+
+video: https://github.com/tchen465/STAT679/blob/main/STAT679_PS2_IV.mp4 
+code: https://github.com/tchen465/STAT679/blob/main/ps2_IV.html
+
+
+V. Transition Taxonomy
+
+a)
+
+https://www.theguardian.com/society/ng-interactive/2023/jun/12/interactive-tool-that-shows-where-you-can-afford-to-buy-or-rent-home-great-britain
+
+This interactive visualization from Guardian Interactive shows the prices of households and rents in different parts of the UK.
+
+1)
+
+When Clicking on any region OR entering the start of postal code, the graph will zoom into this region. One can also adjust the overall zooming using Ctrl + Scroll. This should be forms of View Transformation as it moves the “camera view” .
+
+2)
+
+When hovering on a region, the border of the region will be thickened. More information about the region will be shown in text. I would say this is a form of Data Scheme Change as more features are being shown.
+
+b)
+
+In my choice for a) the specifically used type of graphical mark should be Filled Area.
+The construction of Area is (for example):
+```{html, eval = FALSE}
+<path d="M10 40 L20 30 L30 50 L40 45 L40 60 L10 60 Z" fill="black" />
+``` 
+
+It also used text. 
+The construction of text (for example):
+
+```{html, eval = FALSE}
+<text x="10" y="10" font-size="14" fill="black">Label</text>
+```
+
+Used path, construction:
+
+```{html, eval = FALSE}
+<path d="M10 10 Q20 20 30 10 T50 10" fill="none" stroke="black" />
+```
+
+c)
+
+1) Zoom into a region on click or postal number lookup:
+
+The transform attribute of the SVG would be modified to achieve the zoom effect. This involves updating the translate (to center on the region) and scale (to zoom in) attributes. For postal number transitions, the transition would be based on the postal number lookup, which would give the region's center.
+
+Enter and Exit not applicable here because elements are not added or removed.
+
+2) Show information and thicken border on hover:
+
+Enter:
+
+When hovering over a region, create a new SVG text element (or a group of elements) to display the information about the region. This tooltip enters the SVG.
+
+Exit:
+
+Once the cursor moves away from the region to somewhere without information shown, the tooltip needs to be removed. This is the exit phase where the tooltip's SVG elements are removed from the canvas.
+
+Update:
+
+When moving from one region directly to another, and the tooltip transitioned smoothly, this would involve updating the tooltip's attributes (position and text).
+Thickening of the region's border ia also an update. When hovering, the stroke-width attribute of the region is modified (increased). When moving the cursor away, it's modified again (decreased back to the original width).
+
+
+VI. Icelandic Population Analysis
+
+a) 
+
+1) To use the visualization
+
+The visualization can be utilized in 2 ways, the first way is to select a certain year and choose pause to see the specific population distribution in that year of all ages and gender.
+The second way is to choose play and see the dynamic of the population, thus gaining an overview of changes in birth number, annual deaths and gender surplus of each age. In this way, tracing one specific bar could bring information on people born in a specific year.
+
+2) Potential insights
+
+As birth year the gender surplus may be male or female, but as age increases the surplus seems to inevitably turn to female. This change happen later and later, from less than age 20 in year 1841 to approximately age 75 in 2019
+
+The people who can live to high ages(over 85) have increased disproportionately. While the whole population increases due to baby booms, the proportion who can live to an old age also increased dramatically.
+
+
+b)
+
+This code filters the data array based on a specific year and create a unique key for each data point based on a combination of the sex property and the difference between year and age. 
+
+By filtering the data and creating key, the line of code helps manage the rect elements corresponding to the people born in each year, which would then be entered, updated or exited via "join" to create the dynamic effect.
+
+c)
+
+This is implemented using transition, the rect.transition(t) changes the y position from the baseline to the actual position and set the height = y(0)-y(d.value). In the transition, the lower edge is always at the base while the upper edge rises, so it shows the effect of popping up.
+
+d)
+
+1) Age Group Comparisons: Do the 2 countries differ by age group?
+
+Analyze specific age groups (e.g., children, working-age adults, seniors) and compare the groups' populations between the two countries.
+
+Create segmented bars or stacked bars where each bar represents a specific age group by adjusting the filter in the code.
+
+2) Population Pyramid Comparison: Do the 2 countries have different trends in age and/or gender?
+
+Create dynamic population pyramids for both countries to visualize the age and gender distributions side by side.
+
+Adjust the layout to show mirrored population dynamic bar charts for each country, with bars representing age groups and colors indicating genders. This will make the pyramid.
+
+
+
+
+
