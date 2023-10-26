@@ -4,21 +4,17 @@
     <meta charset="UTF-8">
     <title>D3 Circle Transition</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
 </head>
 <body>
+  <svg width=500 height=500></svg>
     <script>
-        // Create SVG element
-        const svg = d3.select("body")
-                      .append("svg")
-                      .attr("width", 500)
-                      .attr("height", 500);
-
-        // Initial data setup
         let generator = d3.randomUniform(); 
         let x = d3.range(10).map(generator);
 
         // a. Encode data using x-coordinates
-        svg.selectAll("circle")
+        d3.select("svg")
+           .selectAll("circle")
            .data(x)
            .enter()
            .append("circle")
@@ -30,7 +26,7 @@
         // b. Animate circles with transitions on cx
         function update() {
             x = d3.range(10).map(generator); // generate new set of data
-            svg.selectAll("circle")
+            d3.select("svg").selectAll("circle")
                .data(x)
                .transition() 
                .duration(3000) 
