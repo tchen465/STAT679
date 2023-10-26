@@ -6,7 +6,7 @@
     <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
 </head>
 <body>
-    <button id = "button">Update</button>
+    <button id = "Clickbutton">Update</button>
     <svg width=600 height=600> </svg>
 </body>
     <script>
@@ -35,7 +35,7 @@
 		    .transition()
 		    .duration(500)
 		    .attrs({
-		        x: d => d.age * 100,
+		        x: d => 0,
 		        y: d => height0 - d.height,
 		        height: d => d.height
 		    }),
@@ -57,6 +57,6 @@
 		    .remove()
 	    )
     }
-    d3.select("button").on("click", update_vis);
+    d3.select("Clickbutton").on("click", update_vis);
     </script>
 </html>
