@@ -1,101 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Bar Chart</title>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
 </head>
-
 <body>
-    <button onclick="updateAndRedraw()">Update</button>
-
-    <script>
-        // Initialize an empty array for bar ages
-        let bar_ages = [],
-            // Create a uniform random number generator
-            generator = d3.randomUniform(0, 500),
-            // Initialize id to 0
-            id = 0;
-
-        // Setting the chart constants
-        const width = 600;
-        const height = 400;
-        const barWidth = width / 7;
-        const spacing = barWidth / 2;
-
-        // A function to update the data of bars
-        function update() {
-            // Increment the age
-            bar_ages = bar_ages.map(d => {
-                return { id: d.id, age: d.age + 1, height: d.height };
-            });
-
-            // Create a new bar with age 0
-            // Give it a random height and a unique id
-            const newBar = { age: 0, height: generator(), id: id };
-            for (let i = bar_ages.length; i > 0; i--) {
-                bar_ages[i] = bar_ages[i - 1];
-            }
-            bar_ages[0] = newBar;
-
-            // If the total number of bars > 5, remove the last bar
-            if (bar_ages.length > 5) {
-                bar_ages.splice(-1, 1);
-            }
-
-            // Increment the id
-            id += 1;
-        }
-
-        // Create SVG element
-        const svg = d3.select("body").append("svg")
-            .attr("width", width)
-            .attr("height", height);
-
-        // A function to draw the bars
-        function drawBars() {
-            // Create a linear scale for y-axis values
-            const y = d3.scaleLinear()
-                .domain([0, 500])
-                .range([0, height]);
-
-            // Bind data using enter, update, and exit
-            const bars = svg.selectAll(".bar")
-                .data(bar_ages, d => d.id)
-                .join(
-                    enter => enter.append("rect")
-                        .attr("class", "bar")
-                        .attr("x", 0)
-                        .attr("y", height)
-                        .attr("width", barWidth)
-                        .attr("height", 0)
-                        .transition()
-                        .delay(500)
-                        .duration(500)
-                        .attr("y", d => height - y(d.height))
-                        .attr("height", d => y(d.height)),
-                    update => update.transition()
-                        .duration(500)
-                        .attr("x", (d, i) => i * (barWidth + spacing)),
-                    exit => exit.transition()
-                        .duration(500)
-                        .attr("x", width)
-                        .remove()
-                );
-        }
-
-        // A function to update the data and redraw the bars
-        function updateAndRedraw() {
-            update();
-            drawBars();
-        }
-
-        drawBars();
-
-    </script>
-
+    <button id = "button">Update</button>
+    <svg width=600 height=600> </svg>
 </body>
+    <script>
+        let bar_ages = [],
+        generator = d3.randomUniform(0, 500),
+        id = 0;
 
+    function update() {
+      bar_ages = bar_ages.map(d => { return {id: d.id, age: d.age + 1, height: d.height }})
+      bar_ages.push({age: 0, height: generator(), id: id});
+      bar_ages = bar_ages.filter(d => d.age < 5)
+      id += 1;
+    }
+
+    function update_vis() {
+      update()
+      const height0 = 600
+      const width0 = 80
+      d3.select("svg")
+	    .selectAll("rect")
+	    .data(bar_ages, d => d.id)
+	    .join(
+	     enter => enter.append("rect")
+		    .attr("y", height0)
+		    .attr("width",width0)
+		    .transition()
+		    .duration(500)
+		    .attrs({
+		        x: d => d.age * 100,
+		        y: d => height0 - d.height,
+		        height: d => d.height
+		    }),
+	     update => update
+		    .transition()
+		    .duration(500)
+		    .attrs({
+		        x: d => d.age * 100,
+		        y: d => height0 - d.height,
+		        height: d => d.height
+		    }),
+	    exit => exit
+		    .transition()
+	      .duration(500)
+		    .attrs({
+		        x: 500,
+		        width: 0
+		    })
+		    .remove()
+	    )
+    }
+    d3.select("button").on("click", update_vis);
+    </script>
 </html>
