@@ -8,7 +8,6 @@ library(sf)
 library(dplyr)
 library(crosstalk)
 
-# Read and preprocess data
 power_plants <- read_sf("https://raw.githubusercontent.com/krisrs1128/stat992_f23/main/exercises/ps2/power_plants.geojson") %>%
   mutate(
     longitude = st_coordinates(geometry)[, 1],
@@ -16,14 +15,12 @@ power_plants <- read_sf("https://raw.githubusercontent.com/krisrs1128/stat992_f2
     selected_ = rep(TRUE, nrow(.))
   )
 
-# Function to reset selection based on a brush event
 reset_selection <- function(x, brush) {
   if (is.null(brush)) return(rep(TRUE, nrow(x)))
   res <- brushedPoints(x, brush, allRows = TRUE)$selected_
   res
 }
 
-# Function for stacked histogram
 histogram <- function(power_plants) {
   power_plants %>%
     ggplot(aes(x = log_capacity, fill = primary_fuel)) +
@@ -34,7 +31,6 @@ histogram <- function(power_plants) {
     scale_y_continuous(expand = c(0, 0))
 }
 
-# Function for scatterplot
 scatterplot <- function(power_plants) {
   power_plants %>%
     ggplot() +
@@ -45,7 +41,6 @@ scatterplot <- function(power_plants) {
     theme_minimal()
 }
 
-# Function for data table
 data_table <- function(power_plants) {
   power_plants %>%
     st_drop_geometry() %>%
@@ -66,13 +61,11 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   selected <- reactiveVal(rep(TRUE, nrow(power_plants)))
   
-  # Observe brush events and update the selection
   observeEvent(input$plot_brush, {
     sel <- reset_selection(power_plants, input$plot_brush)
     selected(sel)
   })
   
-  # Render the plots and table
   output$histogram <- renderPlot(histogram(power_plants))
   output$scatterplot <- renderPlot(scatterplot(power_plants %>% filter(selected())))
   output$table <- renderDataTable({data_table(power_plants %>% filter(selected()))})
