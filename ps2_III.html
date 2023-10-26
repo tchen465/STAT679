@@ -19,13 +19,13 @@
            .enter()
            .append("circle")
            .attr("cx", d => 500*d)
-           .attr("cy", 250) // setting all circles on the same y-coordinate
+           .attr("cy", 250) 
            .attr("r", 10) 
            .attr("fill", "blue"); 
 
         // b. Animate circles with transitions on cx
         function update() {
-            x = d3.range(10).map(generator); // generate new set of data
+            x = d3.range(10).map(generator); 
             d3.select("svg").selectAll("circle")
                .data(x)
                .transition() 
@@ -35,7 +35,7 @@
                .attr("fill", () => d3.interpolateRainbow(Math.random())) // change color
                .attr("r", () => d3.randomUniform(5, 15)()); // change size randomly 
          
-            setTimeout(update, 3500); // schedule the next update in 3.5 seconds
+            setTimeout(update, 3500); 
         }
 
         // Start the animation loop
