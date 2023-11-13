@@ -11,7 +11,6 @@ function parse(data) {
   }
 }
 
-
 function visualize(data) {
   let scales = make_scales(data);
   let groupedData = d3.group(data, d => d.county);
@@ -20,7 +19,6 @@ function visualize(data) {
     draw_line(value, scales, key);
   });
   add_axes(scales);
-  //draw_choropleth(data,scales);
 }
 
 function draw_line(data, scales, county) {
@@ -28,7 +26,7 @@ function draw_line(data, scales, county) {
     .x(d => scales.x(d.date))
     .y(d => scales.y(d.calfresh));
 
-  d3.select("#line")
+  d3.select("#linegraph")
     .selectAll("path." + county)
     .data([data]).enter()
     .append("path")
@@ -39,7 +37,6 @@ function draw_line(data, scales, county) {
 function add_axes(scales) {
   let x_axis = d3.axisBottom()
         .scale(scales.x)
-        //.tickFormat(d3.timeFormat("%Y")),
       y_axis = d3.axisLeft()
         .scale(scales.y);
 
@@ -72,26 +69,6 @@ function make_scales(data) {
          .domain([0, y_max])
          .range([height - margins.bottom, 0.5*height - margins.top])
   }
-}
-
-function draw_choropleth(data){
-  
-  let projection = d3.geoMercator()
-  .fitsize([width,height,data]);
-  let path = d3.geoPath()
-  .projection(projection);
-  
-  let colorScale = d3.scaleThreshold()
-  .domain([0,10000,50000,100000])
-  .range(d3.schemeBlues[4]);
-  
-  d3.select("#choropleth")
-  .selectAll("path")
-  .data(data.calfresh).enter()
-  .append("path")
-  .attrs({
-    d:path
-  })
 }
 
 let width = 1000,
