@@ -4,14 +4,162 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-random@3"></script>
-    <link rel="stylesheet" href="./PS3_4_ab.css">
+    <style>
+      #linegraph path {
+        fill: none;
+        stroke: blue;
+        stroke-width: 2px;
+      }
+
+      #axes path {
+        stroke: black;
+        stroke-width: 1;
+      }
+
+      #axes line {
+        stroke: black;
+        stroke-width: 1;
+      }
+
+      #choropleth path {
+        stroke: black;
+        stroke-width: 0.5;
+      }
+    </style>
   </head>
   <body>
-    <svg height=500 width=1000>
+
+    <svg id="lineGraphSvg" height="500" width="1000">
       <g id="linegraph"/>
       <g id="axes"/>
+    </svg>
+
+    <svg id="choroplethSvg" height="500" width="1000">
       <g id="choropleth"/>
     </svg>
   </body>
-  <script src="./PS3_4_ab.js"></script>
+  <script>
+      let width = 1000,
+          height = 500,
+          margins = { top: 50, bottom: 50, left: 50, right: 50 };
+      
+      let mapWidth = 900, 
+          mapHeight = 500;
+      
+      let colorScale = d3.scaleQuantize()
+          .domain([0, 840000])
+          .range(d3.quantize(d3.interpolateWarm, 9));
+          
+      // combine parse with date format conversion
+      function parse(data) {
+          let [year, month] = data.date.split(' ');
+          return {
+              date: new Date(year, new Date(`${month} 1, ${year}`).getMonth()),
+              calfresh: +data.calfresh,
+              county: data.county
+          };
+      }
+      // visualization for the line graph
+      function visualize(data) {
+          let scales = make_scales(data);
+          let groupedData = d3.group(data, d => d.county);
+        
+          groupedData.forEach((value, key) => {
+              draw_line(value, scales, key);
+          });
+          add_axes(scales);
+      }
+      
+      function make_scales(data) {
+          let y_max = d3.max(data, d => d.calfresh),
+              x_extent = d3.extent(data, d => d.date);
+      
+          return {
+              x: d3.scaleTime()
+                  .domain(x_extent)
+                  .range([margins.left, 0.5 * width - margins.right]),
+              y: d3.scaleLinear()
+                  .domain([0, y_max])
+                  .range([height - margins.bottom, 0.5 * height - margins.top])
+          };
+      }
+      
+      function draw_line(data, scales, county) {
+          let path_generator = d3.line()
+              .x(d => scales.x(d.date))
+              .y(d => scales.y(d.calfresh));
+      
+          d3.select("#linegraph")
+              .selectAll("path." + county)
+              .data([data])
+              .enter()
+              .append("path")
+              .attr("class", county)
+              .attr("d", path_generator);
+      }
+      
+      function add_axes(scales) {
+          let x_axis = d3.axisBottom().scale(scales.x),
+              y_axis = d3.axisLeft().scale(scales.y);
+      
+          d3.select("#axes")
+              .append("g")
+              .attr("id", "x_axis")
+              .attr("transform", `translate(0,${height - margins.bottom})`)
+              .call(x_axis);
+      
+          d3.select("#axes")
+              .append("g")
+              .attr("id", "y_axis")
+              .attr("transform", `translate(${margins.left}, 0)`)
+              .call(y_axis);
+      }
+      // visualization for the choropleth
+
+        function visualize2(rawData) {
+            let goodData = AvgEnroll(rawData);
+            let geoPath = d3.geoPath()
+                .projection(d3.geoMercator()
+                .fitSize([mapWidth, mapHeight], goodData));
+            d3.select("#choropleth")
+                .selectAll("path")
+                .data(goodData.features)
+                .enter()
+                .append("path")
+                .attr("d", geoPath)
+                .attr("fill", feature => colorScale(feature.properties.avgEn));
+        }
+      
+      function AvgEnroll(rawData) {
+          let tempData = rawData[1];
+          let countyAvg = {};
+          tempData.forEach(row => {
+              let county = row.county;
+              countyAvg[county] = countyAvg[county] || [];
+              if (!isNaN(row.calfresh)) {
+                  countyAvg[county].push(row.calfresh);
+              }
+          });
+      
+          for (let county_n in countyAvg) {
+              countyAvg[county_n] = d3.mean(countyAvg[county_n]);
+          }
+          let goodData = rawData[0];
+          goodData.features.forEach(feature => {
+              let county_name = feature.properties.COUNTY_NAME;
+              feature.properties.avgEn = countyAvg[county_name] || 0;
+          });
+      
+          return goodData;
+      }
+      
+      d3.csv("https://raw.githubusercontent.com/tchen465/STAT679/main/PS3/calfresh-small.csv", parse)
+        .then(visualize);
+      
+      Promise.all([
+          d3.json("https://raw.githubusercontent.com/tchen465/STAT679/main/PS3/California.geojson"),
+          d3.csv("https://raw.githubusercontent.com/tchen465/STAT679/main/PS3/calfresh-small.csv")
+      ]).then(visualize2);
+
+  </script>
 </html>
