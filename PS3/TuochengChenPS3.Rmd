@@ -1,0 +1,291 @@
+---
+title: "TuochengChenPS3"
+output: html_document
+date: "2023-11-13"
+---
+```{r, echo = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, cache = TRUE)
+options(warn = -1)
+```
+
+
+```{r}
+if (!require(tidyverse)) {
+  install.packages("tidyverse")
+  library(tidyverse)
+}
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require(shiny)) {
+  install.packages("shiny")
+  library(shiny)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+if (!require(tmap)) {
+  install.packages("tmap")
+  library(tmap)
+}
+if (!require(sf)) {
+  install.packages("sf")
+  library(sf)
+}
+if (!require(ggalluvial)) {
+  install.packages("ggalluvial")
+  library(ggalluvial)
+}
+if (!require(ggHoriPlot)) {
+  install.packages("ggHoriPlot")
+  library(ggHoriPlot)
+}
+
+if (!require(ggstream)) {
+  install.packages("ggstream")
+  library(ggstream)
+}
+```
+
+1. Glacial Lakes
+
+```{r}
+geojson_url <- "https://raw.githubusercontent.com/tchen465/STAT679/main/GL_3basins_2015.geojson"
+
+lakes <- st_read(geojson_url)
+
+head(lakes)
+```
+
+```{r}
+num_lakes <- nrow(lakes)
+print(paste("Number of lakes:", num_lakes))
+```
+```{r}
+largest_lakes <- lakes %>%
+  group_by(Sub_Basin) %>%
+  mutate(max_area_in_basin = max(Area, na.rm = TRUE)) %>%
+  filter(Area == max_area_in_basin) %>%
+  ungroup()
+
+for (i in 1:nrow(largest_lakes)){ 
+  print(paste0(largest_lakes$Latitude[i], "N ", largest_lakes$Longitude[i],"E  is the largest Lake for ", largest_lakes$Sub_Basin[i]))
+}
+```
+
+b)
+
+```{r}
+tm_shape(largest_lakes) +
+  tm_polygons(col = "blue", alpha = 0.5, border.col = "white") +
+  tm_facets(by = "GL_ID", ncol = 4) + 
+  tm_scale_bar() +
+  tm_layout(main.title = "Largest Lakes in Each Sub-basin")
+```
+
+
+c)
+
+
+```{r}
+bbox <- st_bbox(c(xmin = 85.8, ymin = 28.2, xmax = 86, ymax = 28.4))
+lakes_in_range <- st_crop(lakes, bbox)
+
+tm_shape(lakes_in_range) +
+  tm_polygons(col = "blue", alpha = 0.5) +
+  tm_layout(main.title = "Lakes in the Rnge")
+```
+
+
+2. Australian Pharmaceuticals II
+
+```{r}
+pbs_full <- read_csv("https://uwmadison.box.com/shared/static/fcy9q1uleqru7gcs287q903y0rcnw2a2.csv") %>%
+  mutate(Month = as.Date(Month))
+top_atcs <- pbs_full %>%
+  group_by(ATC2_desc) %>%
+  summarise(total = sum(Scripts)) %>%
+  slice_max(total, n = 10) %>%
+  pull(ATC2_desc)
+pbs <- pbs_full %>%
+  filter(ATC2_desc %in% top_atcs, Month > "2007-01-01")
+
+```
+
+a)
+
+```{r}
+ggplot(pbs, aes(x = Month, y = Scripts, fill = ATC2_desc)) +
+  geom_area() +
+  theme_minimal() +
+  labs(title = "Top 10 Pharmaceutical Types Over Time", x = "Month", y = "Number of Prescriptions")
+```
+
+b)
+
+```{r}
+ggplot(data = pbs, aes(axis1 = Month, axis2 = ATC2_desc, y = Scripts)) +
+  geom_alluvium(aes(fill = ATC2_desc)) +
+  theme_minimal() +
+  labs(title = "Prescription Flow of Top 10 Pharmaceutical Types", x = "", y = "Number of Prescriptions")
+
+```
+
+c). Comparing Visualization Strategies
+
+Stacked Area Visualization:
+
+Strengths: 
+Clearly shows the total volume over time. 
+Good for tracking individual categories. 
+
+Weaknesses: 
+Overlapping areas can make it hard to compare individual categories. 
+Not ideal for showing relationships or transitions between categories. 
+
+
+Alluvial Visualization: 
+
+Strengths: 
+Good for showing the changes between categories over time. 
+Can represent complex relationships and transitions. 
+ 
+Weaknesses: 
+Hard to interpret with many categories. 
+Not as intuitive as traditional plots like stacked areas. 
+
+
+Queries: 
+
+Easier with Stacked Area: "What is the trend for a specific pharmaceutical type?" 
+
+Easier with Alluvial: "Are there any notable transitions between types?" 
+
+
+3.  Spotify Time Series II
+
+```{r}
+spotify_full <- read_csv("https://uwmadison.box.com/shared/static/xj4vupjbicw6c8tbhuynw0pll6yh1w0d.csv")
+
+top_songs <- spotify_full %>%
+  group_by(track_name) %>%
+  summarise(total = sum(streams)) %>%
+  slice_max(total, n = 40) %>%
+  pull(track_name)
+
+spotify <- spotify_full %>%
+  filter(region == "global", track_name %in% top_songs)
+```
+
+```{r}
+ggplot(spotify, aes(x = date, y = streams)) +
+  geom_line() +
+  facet_wrap(~track_name,ncol=8) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Spotify Streams of Top 40 Tracks in 2017",
+       x = "Date",
+       y = "Streams")
+```
+
+```{r, fig.width=8, fig.height=16}
+spotify$track_name <- substr(spotify$track_name, 1, 20)
+cutpoints <- seq(0, max(spotify$streams, na.rm = TRUE), by = 1000000)
+
+ggplot(spotify) +
+  geom_horizon(aes(x = date, y = streams, fill = ..Cutpoints..), 
+               origin = 0, horizonscale = cutpoints) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +  
+  facet_grid(track_name ~ .) +
+  theme(
+    strip.text.y = element_text(angle = 0),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+```
+
+
+c. Dynamic Visualization with D3
+
+Create an SVG for the horizon plot. Implement scales and axes.First draw the horizon plots.
+Add interactive events,I will select mouseover.
+Upon mouseover any part in the horizon plot, 
+the plot extends so that the specific plot selected is shown as a single full area plot, 
+while the facets below it move downwards to create space for it.
+
+
+
+
+
+
+
+4. CalFresh Enrollment II
+
+a) b)
+
+https://github.com/tchen465/STAT679/tree/main/PS3
+
+This contains the html for question a) and b), as well as the data.
+
+I merged the css, js file all into the html so that it is stable. It may look a bit ugly though.
+
+c) 
+What is the trend of enrollment for a certain county in California?
+By adding a mouseover to the choropleth map, the following effect could be achieved:
+When mouse hovers on the map of a certain county, 
+the line graph changes to the detailed trend of enrollment for this particular county.
+
+d)
+
+
+
+5.  Temporal and Geospatial Commands
+
+a) geom_stream:
+
+Used in streamgraphs, a type of stacked area chart. Streamgraphs are useful for visualizing changes in data over time, especially for multiple categories that fluctuate around a central axis. Can highlight the relative change of different components in a dataset.
+
+Scenario: When analyzing social media trends over time and focusing on various topics like sports, politics, entertainment, and technology. Using geom_stream, you could create a streamgraph that shows how the popularity of these topics fluctuates over time.
+
+b) tm_lines:
+
+A finction in the tmap package in R. This function is designed for creating maps with lines, useful for representing paths, routes.
+
+Scenario: The migration patterns of birds across continents. By using tm_lines, one can map the migratory routes of different bird species, showing their pathways and stopovers across various geographic regions.
+
+c) rast:
+
+The rast function is used for raster data handling. Raster data is made up of pixels (or cells), and each pixel holds a value representing information, such as temperature, elevation, or land use. One can use rast to create raster maps.
+
+Scenario: Analyzing temperature changes across a region. rast would be useful for creating a raster map which visualizes temperature variations, with different colors representing different temperature ranges.
+
+d) geom_horizon:
+
+geom_horizon is used to create horizon plots, which are a compact way of displaying dense time series data. Horizon plots use color and overlap, allowing for efficient use of space.
+
+Scenario: Monitoring stock market data, tracking the price changes of various stocks over several months. Using geom_horizon, one could create horizon plots for each stock, offering a clear visualization of price movements within a limited space. This would enable a quick comparison of volatility and trends across different stocks.
+
+
+6.Visualization for Everyday Decisions
+
+a) Traffic Real Time Data
+The Real Time Traffic has long since been a troublesome problem for most large cities. In certain regions digital screens showing the real life traffic in different colors are adopted, with green for normal and red for congestion, yellow for somewhere in between. Though dynamic, it is not interactive.
+
+b)
+The question it helps is the congestion situation in the periphery. Consequently it may even answer whether one will be late due to traffic reasons. It can help you arrive at an accurate answer in a glance but the limitations persist: The screen can only cover a relatively small region's traffic data.
+
+c)
+One way to solve this would be to switch to the traffic congestion visualization in other places from time to time, with the time proportional to the current number of vehicles waiting to go that way. In this way people can have a broader knowledge about the congestion in all nearby area and can plan for a better plan, with less risk of choosing a seemingly less stuck way but countering heavier traffic outside the range shown on the screen.
+
+
+
+
+
+
+
+
+
+
+
