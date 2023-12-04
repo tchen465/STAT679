@@ -25,7 +25,7 @@
     </svg>
   </body>
   <script>
-function make_tree(edges) {
+    function make_tree(edges) {
       stratifier = d3.stratify()
         .id(d => d.to)
         .parentId(d => d.from)
