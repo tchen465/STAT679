@@ -157,8 +157,8 @@ function make_tree(edges) {
     }
     
     Promise.all([
-      d3.csv("covid-nodes.csv", d3.autoType),
-      d3.csv("covid-edges.csv", d3.autoType)
+      d3.csv("https://raw.githubusercontent.com/krisrs1128/stat992_f23/main/exercises/ps4/covid-nodes.csv", d3.autoType),
+      d3.csv("https://raw.githubusercontent.com/krisrs1128/stat992_f23/main/exercises/ps4/covid-edges.csv", d3.autoType)
     ]).then(visualize)
   </script>
 </html>
