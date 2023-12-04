@@ -1,0 +1,135 @@
+    function make_tree(edges) {
+      stratifier = d3.stratify()
+        .id(d => d.to)
+        .parentId(d => d.from)
+      
+      let root = stratifier(edges)
+      tree_gen = d3.tree()
+        .size([1500, 800]);
+      return tree_gen(root);
+    }
+    
+    function visualize(data) {
+      
+      [nodes, edges] = data
+      edges.unshift({from: null, to:1, name: 'NA', date:'NA', country:'NA'});
+      console.log(edges)
+    
+      let link_gen = d3.linkVertical()
+        .x(d => d.x)
+        .y(d => d.y);
+        
+      const countries = new Set(['China', 'UnitedStates', 'Netherlands','Australia','UnitedKingdom','Singapore','Switzerland','Korea','Japan', 'NA']);
+      
+      nodes = nodes.map(item => {
+        if (!countries.has(item.country)) {
+            return { ...item, country: 'Other' };
+        }
+        return item;
+    });
+    
+      nodes_info = []
+      for (let i = 0; i < nodes.length; i++) {
+        nodes_info[i] = {...edges[i],...nodes[i]}
+      }
+      
+      console.log(nodes_info);
+      console.log(data);
+      
+      tree = make_tree(nodes_info);
+      
+      const Countries_1 = Array.from(new Set(nodes.map(d => d.country)));
+      console.log(Countries_1)
+      const CountryColors = ["#D3D3D3","#b82cbb",'#b2575d','#e0fb18','#c5738c','#f9c098','#0f34b7','#0d0742','#eaa31f',"#38f8e9"]
+      const colorScale = d3.scaleOrdinal()
+      .domain(Countries_1) 
+      .range(CountryColors);
+      
+        d3.select("#tree")
+        .selectAll("path")
+        .data(tree.links()).enter()
+        .append("path")
+        .attrs({
+          d: link_gen
+        })
+    
+      d3.select("#tree")
+        .selectAll("circle")
+        .data(tree.descendants()).enter()
+        .append("circle")
+        .attrs({
+          cx: d => d.x,
+          cy: d => d.y,
+          r: d => radius(d.depth), 
+          fill: d => colorScale(d.data.country)
+        })
+        
+      d3.select("#tree")
+        .selectAll("text")
+        .data(tree.descendants()).enter()
+        .append("text")
+        .attrs({
+          x: d => d.x,
+          y: d => d.y + 20, 
+          "text-anchor": "middle", 
+          "alignment-baseline": "middle",
+          fill: "#333", 
+          "font-size": "7px"
+        })
+        .text(d => d.data.country);
+        
+      const yOffset = 50; 
+      d3.select("#tree")
+        .attr("transform", `translate(0, ${yOffset})`);
+        
+      neighborhoods = d3.Delaunay.from(tree.descendants().map(d => [d.x, d.y]))
+      d3.select("svg").on("mouseover", (ev) => update_labels(ev, neighborhoods, tree, colorScale))
+    }
+    
+    function focus_ids(cur_node) {
+        descendants = cur_node.descendants().map(d => d.id)
+        ancestors = cur_node.ancestors().map(d => d.id)
+        return ancestors.concat(descendants)
+    }
+    
+    function highlight(d, i, ix, focus) {
+      if (i == ix) {
+        return 1
+      } else if (focus.indexOf(d.id) != -1) {
+        return 0
+      }
+      return -1
+    }
+    
+    function update_labels(ev, neighborhoods, tree, colorScale) {
+      let pos = d3.pointer(ev),
+        ix = neighborhoods.find(pos[0], pos[1]),
+        cur_node = tree.descendants()[ix],
+        ancestors = cur_node.ancestors().map(d => d.id); 
+    
+      d3.select("#tree")
+        .selectAll("circle")
+        .transition().duration(100)
+        .attrs({
+          r: (d, i) => {
+            let relevance = ancestors.includes(d.id) ? 1 : -1; 
+            return relevance == 1 ? 2 * radius(d.depth) : .5 * radius(d.depth);
+          },
+          fill: (d, i) => ancestors.includes(d.id) ? colorScale(d.data.country) : "#F5F5F5"
+        })
+    
+      d3.select("#tree")
+        .selectAll("path")
+        .transition().duration(100)
+        .attr("stroke-width", d => ancestors.includes(d.target.id) ? 1 : 0.05)
+    
+    }
+    
+    function radius(depth) {
+      return 10 - (0.3*depth)
+    }
+    
+    Promise.all([
+      d3.csv("covid-nodes.csv", d3.autoType),
+      d3.csv("covid-edges.csv", d3.autoType)
+    ]).then(visualize)
